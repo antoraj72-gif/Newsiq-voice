@@ -22,3 +22,9 @@ English names in Tamil script. One paragraph per story.
 
 Voice model: AI4Bharat Indic-TTS (https://github.com/AI4Bharat/Indic-TTS), released under its own
 licence (see that repository). Converted to ONNX for lightweight CPU use.
+
+## Other folders
+
+- `fonts/` – NewsIQ Tamil font (Noto Sans Tamil + Noto Sans merged, SIL Open Font Licence) used by the
+  Tamil PDF builder.
+- `briefs/YYYY-MM-DD/` – each edition's Tamil PDF and Tamil voice note (MP3), linked from the email.
