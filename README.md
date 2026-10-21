@@ -1,0 +1,24 @@
+# NewsIQ Tamil voice pack
+
+Private voice files for the NewsIQ daily news brief (Tamil voice note).
+
+- `voice_models/` – compact ONNX pack of the AI4Bharat (IIT Madras) Indic-TTS **Tamil** voice
+  (FastPitch text encoder + decoder, HiFiGAN vocoder). Weights are stored in half precision and
+  expanded back to full precision when loaded, so output matches the original model.
+- `newsiq_voice.py` – makes an MP3 from a Tamil script. Default: male voice at 1.2x speed.
+
+## Use
+
+```bash
+pip install onnx onnxruntime numpy soundfile --break-system-packages   # ffmpeg must be installed
+git clone --depth 1 https://github.com/antoraj72-gif/newsiq-voice
+python3 newsiq-voice/newsiq_voice.py script_ta.txt NewsIQ_Tamil_Voice.mp3 male 1.2
+```
+
+Script rules: Tamil letters only – write numbers, dates, % and rupee amounts as Tamil words, and
+English names in Tamil script. One paragraph per story.
+
+## Credits
+
+Voice model: AI4Bharat Indic-TTS (https://github.com/AI4Bharat/Indic-TTS), released under its own
+licence (see that repository). Converted to ONNX for lightweight CPU use.
