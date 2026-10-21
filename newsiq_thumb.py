@@ -61,7 +61,17 @@ def pick_icon(story):
     return ICON_DEFAULT.get(story.get("cat", ""), "news")
 
 def draw_icon(img, name, cx, cy, size, color):
-    import io, cairosvg
+    import io
+    try:
+        import cairosvg
+    except ImportError:
+        import subprocess
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "cairosvg", "--break-system-packages"],
+                       capture_output=True)
+        try:
+            import cairosvg
+        except ImportError:
+            return False  # card still renders, just without the icon
     path = os.path.join(HERE, "icons", name + ".svg")
     if not os.path.exists(path):
         path = os.path.join(HERE, "icons", "news.svg")
