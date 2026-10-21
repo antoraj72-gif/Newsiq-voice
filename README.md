@@ -27,5 +27,6 @@ licence (see that repository). Converted to ONNX for lightweight CPU use.
 
 - `fonts/` – NewsIQ Tamil font (Noto Sans Tamil + Noto Sans merged, SIL Open Font Licence) used by the
   Tamil PDF builder.
-- `newsiq_thumb.py` – 1280x720 JPEG headline thumbnail (English or Tamil) from a brief JSON.
+- `newsiq_thumb.py` – 1280x720 JPEG headline thumbnail (English or Tamil) from a brief JSON, with a topic icon.
+- `icons/` – curated Tabler Icons (MIT licence, see icons/LICENSE-tabler-icons.txt).
 - `briefs/YYYY-MM-DD/` – each edition's Tamil PDF, Tamil voice note (MP3) and thumbnails, linked from the email.

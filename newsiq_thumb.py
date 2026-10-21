@@ -2,9 +2,11 @@
 
 Usage:  python3 newsiq_thumb.py brief.json NewsIQ_Thumb.jpg
 
-Uses the lead story (stories[0]: cat, headline, developing) as the big headline and the next
-three top_headlines as a strip below. Text only - no photos. Needs Pillow with raqm (Tamil shaping)
-and fonts/NewsIQTamil-Regular.ttf + NewsIQTamil-Bold.ttf (next to this script).
+Uses the lead story (stories[0]: cat, headline, developing) as the big headline, a topic icon on the
+right, and the next three top_headlines as a strip below. No photos.
+Icon: stories[0]["icon"] if set (a file name in icons/, e.g. "cloud-rain"), else picked from keywords in
+the headline (English or Tamil), else the category default. Icons: Tabler Icons (MIT licence).
+Needs Pillow with raqm (Tamil shaping), cairosvg, and fonts/NewsIQTamil-*.ttf next to this script.
 """
 import json, os, re, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -22,6 +24,51 @@ CAT_TA = {"INDIA": "இந்தியா", "TAMIL NADU": "தமிழ்நா
           "MARKETS": "பங்குச் சந்தை", "WORLD": "உலகம்", "HEALTH": "சுகாதாரம்", "TECH & AI": "தொழில்நுட்பம் & AI",
           "AUTO": "வாகனம்", "CONSUMER ELECTRONICS": "மின்சாதனங்கள்", "SPORTS": "விளையாட்டு", "WAR": "போர்",
           "POLITICS": "அரசியல்"}
+
+ICON_DEFAULT = {"INDIA": "flag", "TAMIL NADU": "map-pin", "KONGU REGION": "map-pin", "BUSINESS": "briefcase",
+                "MARKETS": "chart-candle", "WORLD": "world", "HEALTH": "stethoscope", "TECH & AI": "cpu",
+                "AUTO": "car", "CONSUMER ELECTRONICS": "air-conditioning", "SPORTS": "trophy", "WAR": "shield",
+                "POLITICS": "scale"}
+ICON_WORDS = [  # (icon, keywords - English lower-case or Tamil)
+    ("id", ["voter", "electoral", "election", "ballot", "வாக்காள", "தேர்தல்"]),
+    ("cloud-storm", ["cyclone", "storm", "புயல்"]),
+    ("cloud-rain", ["rain", "flood", "monsoon", "மழை", "வெள்ள"]),
+    ("thermometer", ["heatwave", "heat wave", "temperature", "வெப்ப"]),
+    ("gas-station", ["crude", "oil", "petrol", "diesel", "brent", "எண்ணெய்", "பெட்ரோல்"]),
+    ("chart-candle", ["sensex", "nifty", "ipo", "shares", "stock", "market", "சென்செக்ஸ்", "நிஃப்டி", "பங்கு"]),
+    ("coin-rupee", ["rupee", "inflation", "rbi", "ரூபாய்", "பணவீக்க"]),
+    ("gavel", ["court", "verdict", "judge", "நீதிமன்ற", "தீர்ப்பு"]),
+    ("virus", ["ebola", "virus", "outbreak", "covid", "dengue", "வைரஸ்", "எபோலா", "டெங்கு"]),
+    ("vaccine", ["vaccine", "தடுப்பூசி"]),
+    ("cricket", ["cricket", "t20", "odi", "test match", "ipl", "ranji", "கிரிக்கெட்", "இருபது ஓவர்"]),
+    ("ball-football", ["football", "fifa", "கால்பந்து"]),
+    ("charging-pile", ["electric vehicle", "electric car", " ev ", "ev ", "மின்சார வாகன", "மின்சார கார்"]),
+    ("robot", [" ai ", "artificial intelligence", "ai agent", "chatbot", "செயற்கை நுண்ணறிவு"]),
+    ("plane", ["airport", "flight", "airline", "விமான"]),
+    ("train", ["railway", "metro", "train", "ரயில்", "மெட்ரோ"]),
+    ("school", ["school", "exam", "students", "பள்ளி", "தேர்வு", "மாணவ"]),
+    ("tank", ["war", "military", "missile", "strike", "போர்", "ராணுவ"]),
+    ("world", ["peace", "summit", "diplomat", "envoy", "அமைதி", "தூதர்"]),
+]
+
+def pick_icon(story):
+    if story.get("icon"):
+        return story["icon"]
+    text = " " + plain(story.get("headline", "")).lower() + " "
+    for icon, words in ICON_WORDS:
+        if any(w in text for w in words):
+            return icon
+    return ICON_DEFAULT.get(story.get("cat", ""), "news")
+
+def draw_icon(img, name, cx, cy, size, color):
+    import io, cairosvg
+    path = os.path.join(HERE, "icons", name + ".svg")
+    if not os.path.exists(path):
+        path = os.path.join(HERE, "icons", "news.svg")
+    svg = open(path, encoding="utf-8").read().replace("currentColor", color)
+    png = cairosvg.svg2png(bytestring=svg.encode(), output_width=size, output_height=size)
+    ic = Image.open(io.BytesIO(png)).convert("RGBA")
+    img.paste(ic, (int(cx - size / 2), int(cy - size / 2)), ic)
 
 def font(path, size):
     return ImageFont.truetype(path, size, layout_engine=ImageFont.Layout.RAQM)
@@ -78,12 +125,18 @@ def make(data, out):
     if s.get("developing"):
         chip(d, cx, 118, "தொடரும் செய்தி" if ta else "DEVELOPING", RED, fc)
     head = plain(s.get("headline") or (data.get("top_headlines") or [""])[0])
-    size, lh = (58, 1.45) if ta else (64, 1.18)
+    # topic icon in a circle on the right
+    R, icx, icy = 128, W - M - 128, 300
+    col = CAT.get(cat, "#6b7280")
+    d.ellipse([icx - R, icy - R, icx + R, icy + R], fill="#1c2632", outline=col, width=6)
+    draw_icon(img, pick_icon(s), icx, icy, 150, "#ffffff")
+    tw = W - 2 * M - 2 * R - 40
+    size, lh = (52, 1.45) if ta else (58, 1.18)
     fh = font(FB, size)
-    lines = wrap(d, head, fh, W - 2 * M, 3)
-    while len(lines) == 3 and size > 44 and lines[-1].endswith("…"):
-        size -= 4; fh = font(FB, size); lines = wrap(d, head, fh, W - 2 * M, 3)
-    y = 196
+    lines = wrap(d, head, fh, tw, 4 if ta else 4)
+    while lines and lines[-1].endswith("…") and size > 40:
+        size -= 4; fh = font(FB, size); lines = wrap(d, head, fh, tw, 4)
+    y = 186
     for ln in lines:
         d.text((M, y), ln, font=fh, fill=INK, anchor="la"); y += int(size * lh)
     # secondary headlines
